@@ -225,15 +225,15 @@ public class RefactoringService {
   }
 
   /**
-   * Create rename refactoring session.
+   * Create recommend refactoring session.
    *
-   * @param settings rename settings
-   * @return the rename refactoring session
+   * @param settings recommend settings
+   * @return the recommend refactoring session
    * @throws CoreException when RenameSupport can't be created
    * @throws RefactoringException when Java element was not found
    */
   @POST
-  @Path("rename/create")
+  @Path("recommend/create")
   @Produces("application/json")
   @Consumes("application/json")
   public RenameRefactoringSession createRenameRefactoring(CreateRenameRefactoring settings)
@@ -257,39 +257,70 @@ public class RefactoringService {
         elementToRename = null;
     }
     if (elementToRename == null) {
-      throw new RefactoringException("Can't find java element to rename.");
+      throw new RefactoringException("Can't find java element to recommend.");
     }
+
+    JavaRenameRecommend.javaElement = elementToRename;
 
     return manager.createRenameRefactoring(
         elementToRename, cu, settings.getOffset(), settings.isRefactorLightweight());
   }
 
   /**
-   * Apply linked mode rename refactoring.
+   * Apply linked mode recommend refactoring.
    *
    * @param refactoringApply linked mode setting and refactoring session id
    * @return the result fo applied refactoring
    * @throws RefactoringException when there are no corresponding refactoring session
-   * @throws CoreException when impossible to apply rename refactoring
+   * @throws CoreException when impossible to apply recommend refactoring
    */
   @POST
-  @Path("rename/linked/apply")
+  @Path("recommend/linked/apply")
   @Consumes("application/json")
   @Produces("application/json")
   public RefactoringResult applyLinkedModeRename(LinkedRenameRefactoringApply refactoringApply)
       throws RefactoringException, CoreException {
-    return manager.applyLinkedRename(refactoringApply);
+
+    RefactoringResult res = manager.applyLinkedRename(refactoringApply);
+    JavaRenameRecommend javaRenameRecommend = new JavaRenameRecommend();
+
+    javaRenameRecommend.recommend(refactoringApply);
+    return res;
+  }
+
+  @POST
+  @Path("recommend/linked/extension/recommendation")
+  @Consumes("application/json")
+  @Produces("application/json")
+  public String getRecommendation() {
+    if (JavaRenameRecommend.result.getRecommendOriginalName().equals("")) return "$$null";
+    return JavaRenameRecommend.result.getRecommendRefactorType()
+        + " "
+        + JavaRenameRecommend.result.getRecommendOriginalName()
+        + " to "
+        + JavaRenameRecommend.result.getRecommendSubsequentName();
+  }
+
+  @POST
+  @Path("recommend/linked/extension/position")
+  @Consumes("application/json")
+  @Produces("application/json")
+  public String getRecommendationPosition() {
+    return ""
+        + JavaRenameRecommend.result.getRecommendStartPosition()
+        + ","
+        + JavaRenameRecommend.result.getRecommendOriginalName().length();
   }
 
   /**
-   * Validate new name. Used for validation new name in rename refactoring wizard.
+   * Validate new name. Used for validation new name in recommend refactoring wizard.
    *
    * @param newName the new element name
    * @return the status of validation
    * @throws RefactoringException when there are no corresponding refactoring session
    */
   @POST
-  @Path("rename/validate/name")
+  @Path("recommend/validate/name")
   @Consumes("application/json")
   @Produces("application/json")
   public RefactoringStatus validateNewName(ValidateNewName newName) throws RefactoringException {
@@ -297,13 +328,13 @@ public class RefactoringService {
   }
 
   /**
-   * Set rename refactoring wizard settings.
+   * Set recommend refactoring wizard settings.
    *
    * @param settings refactoring wizard settings
    * @throws RefactoringException when there are no corresponding refactoring session
    */
   @POST
-  @Path("set/rename/settings")
+  @Path("set/recommend/settings")
   @Consumes("application/json")
   public void setRenameSettings(RenameSettings settings) throws RefactoringException {
     manager.setRenameSettings(settings);
@@ -330,6 +361,6 @@ public class RefactoringService {
     if (javaElements != null && javaElements.length > 0) {
       return javaElements[0];
     }
-    throw new RefactoringException("Can't find java element to rename.");
+    throw new RefactoringException("Can't find java element to recommend.");
   }
 }
